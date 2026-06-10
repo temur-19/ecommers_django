@@ -1,1 +1,7 @@
-<h1>Home </h1>
+<ul>
+    {% for order in product %}
+        <li>
+            <strong>Product:</strong> {{ order.name }}<br>
+        </li>
+    {% endfor %}
+</ul>
