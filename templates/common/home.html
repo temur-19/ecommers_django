@@ -1,7 +1,742 @@
-<ul>
-    {% for order in product %}
-        <li>
-            <strong>Product:</strong> {{ order.name }}<br>
-        </li>
-    {% endfor %}
-</ul>
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ShopDRF</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f7f7f5;--surface:#fff;--border:#e8e6e1;--border-h:#c8c4bc;
+  --text:#1a1a18;--muted:#6b6860;--hint:#9e9b94;
+  --accent:#1a56db;--accent-h:#1447c0;
+  --ok-bg:#ecfdf3;--ok-t:#166534;
+  --warn-bg:#fffbeb;--warn-t:#92400e;
+  --info-bg:#eff4ff;--info-t:#1a56db;
+  --err-bg:#fef2f2;--err-t:#991b1b;
+  --r:10px;--rs:6px;--rp:99px;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.6}
+
+/* NAV */
+nav{position:sticky;top:0;z-index:200;background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;height:56px;gap:8px}
+.logo{font-size:15px;font-weight:600;margin-right:auto;display:flex;align-items:center;gap:8px}
+.logo-dot{width:8px;height:8px;border-radius:50%;background:var(--accent)}
+.nb{padding:7px 14px;border-radius:var(--rs);border:1px solid var(--border);background:transparent;color:var(--muted);font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .15s}
+.nb:hover{border-color:var(--border-h);color:var(--text);background:var(--bg)}
+.nb.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.cbadge{background:var(--accent);color:#fff;font-size:10px;font-weight:700;border-radius:var(--rp);padding:1px 6px;min-width:18px;text-align:center}
+
+/* LAYOUT */
+.cont{max-width:1100px;margin:0 auto;padding:28px 24px}
+.page{display:none}.page.active{display:block}
+.topbar{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;gap:12px}
+.ptitle{font-size:20px;font-weight:600;letter-spacing:-.4px}
+.psub{font-size:13px;color:var(--muted);margin-top:2px}
+
+/* FILTERS */
+.filters{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:22px}
+.pill{padding:6px 14px;border-radius:var(--rp);border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:12px;cursor:pointer;transition:all .15s}
+.pill:hover{border-color:var(--border-h);color:var(--text)}
+.pill.active{background:var(--text);border-color:var(--text);color:#fff}
+
+/* PRODUCTS */
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
+.pcard{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;cursor:default;transition:all .18s}
+.pcard:hover{border-color:var(--border-h);box-shadow:0 1px 3px rgba(0,0,0,.06);transform:translateY(-1px)}
+.pthumb{width:100%;aspect-ratio:1;border-radius:var(--rs);background:var(--bg);display:flex;align-items:center;justify-content:center;margin-bottom:12px;overflow:hidden}
+.pthumb img{width:100%;height:100%;object-fit:cover}
+.pcat-tag{font-size:10px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--hint);margin-bottom:4px}
+.pname{font-size:13px;font-weight:500;margin-bottom:10px;line-height:1.4}
+.pfoot{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.pprice{font-size:14px;font-weight:700}
+.btn-add{padding:6px 12px;border-radius:var(--rs);border:1px solid var(--border);background:transparent;font-size:12px;cursor:pointer;color:var(--muted);transition:all .15s;white-space:nowrap}
+.btn-add:hover{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn-add.added{background:var(--ok-bg);border-color:#86efac;color:var(--ok-t)}
+
+/* ORDERS */
+.ogrid{display:flex;flex-direction:column;gap:12px}
+.ocard{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.ohead{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border)}
+.ometa{display:flex;align-items:center;gap:12px}
+.oid{font-weight:600;font-size:13px}
+.odate{font-size:12px;color:var(--muted)}
+.sbadge{font-size:11px;font-weight:600;padding:3px 10px;border-radius:var(--rp);letter-spacing:.2px}
+.s-pending{background:var(--warn-bg);color:var(--warn-t)}
+.s-processing{background:var(--info-bg);color:var(--info-t)}
+.s-delivered{background:var(--ok-bg);color:var(--ok-t)}
+.s-cancelled{background:var(--err-bg);color:var(--err-t)}
+.obody{padding:14px 18px}
+.orow{display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:12px;border-bottom:1px solid var(--border)}
+.orow:last-child{border:none}
+.orow-name{color:var(--text)}
+.orow-qty{color:var(--muted);margin-left:6px}
+.orow-price{font-weight:500}
+.ofoot{display:flex;justify-content:space-between;align-items:center;padding:12px 18px;background:var(--bg);border-top:1px solid var(--border)}
+.otl{font-size:12px;color:var(--muted)}
+.otv{font-size:14px;font-weight:700}
+
+/* CART */
+.clayout{display:grid;grid-template-columns:1fr 300px;gap:20px;align-items:start}
+@media(max-width:700px){.clayout{grid-template-columns:1fr}}
+.citem{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;display:flex;align-items:center;gap:14px;margin-bottom:10px}
+.cicon{width:48px;height:48px;border-radius:var(--rs);background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;overflow:hidden}
+.cicon img{width:100%;height:100%;object-fit:cover}
+.cinfo{flex:1;min-width:0}
+.cname{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cunit{font-size:12px;color:var(--muted)}
+.qctrl{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.qbtn{width:28px;height:28px;border-radius:var(--rs);border:1px solid var(--border);background:var(--bg);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text);transition:all .15s}
+.qbtn:hover{border-color:var(--border-h);background:var(--surface)}
+.qval{font-size:14px;font-weight:600;min-width:22px;text-align:center}
+.rmbtn{padding:5px 10px;border-radius:var(--rs);border:1px solid #fca5a5;background:transparent;font-size:12px;color:var(--err-t);cursor:pointer;transition:all .15s;flex-shrink:0}
+.rmbtn:hover{background:var(--err-bg)}
+
+/* SUMMARY */
+.sbox{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px;position:sticky;top:76px}
+.stitle{font-size:15px;font-weight:600;margin-bottom:16px}
+.srow{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);margin-bottom:8px}
+.sdiv{border:none;border-top:1px solid var(--border);margin:12px 0}
+.stotal{display:flex;justify-content:space-between;font-size:15px;font-weight:700;margin-bottom:16px}
+.btn-order{width:100%;padding:12px;border-radius:var(--rs);border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s}
+.btn-order:hover{background:var(--accent-h)}
+.btn-order:disabled{background:var(--hint);cursor:not-allowed}
+
+/* ADMIN PANEL */
+.admin-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-bottom:28px}
+.admin-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px}
+.admin-card-title{font-size:13px;font-weight:600;margin-bottom:14px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.form-group{margin-bottom:12px}
+.form-group label{display:block;font-size:12px;font-weight:500;color:var(--muted);margin-bottom:4px}
+.form-group input,.form-group select{width:100%;padding:8px 10px;border-radius:var(--rs);border:1px solid var(--border);background:var(--bg);font-size:13px;color:var(--text);outline:none;transition:border-color .15s}
+.form-group input:focus,.form-group select:focus{border-color:var(--accent)}
+.btn-submit{width:100%;padding:9px;border-radius:var(--rs);border:none;background:var(--accent);color:#fff;font-size:13px;font-weight:600;cursor:pointer;transition:background .15s}
+.btn-submit:hover{background:var(--accent-h)}
+.btn-submit:disabled{background:var(--hint);cursor:not-allowed}
+.result-box{margin-top:10px;padding:10px;border-radius:var(--rs);font-size:12px;font-family:monospace;white-space:pre-wrap;word-break:break-all;max-height:120px;overflow-y:auto;display:none}
+.result-ok{background:var(--ok-bg);color:var(--ok-t)}
+.result-err{background:var(--err-bg);color:var(--err-t)}
+
+/* STATE */
+.sbox-state{text-align:center;padding:60px 20px;color:var(--muted)}
+.sbox-icon{font-size:40px;margin-bottom:12px}
+.sbox-title{font-size:15px;font-weight:500;color:var(--text);margin-bottom:6px}
+.sbox-sub{font-size:13px}
+.spinner{width:32px;height:32px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 14px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* MODAL */
+.moverlay{position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:300;display:none;align-items:center;justify-content:center}
+.moverlay.open{display:flex}
+.modal{background:var(--surface);border-radius:var(--r);padding:24px;width:420px;max-width:95vw}
+.mtitle{font-size:16px;font-weight:600;margin-bottom:4px}
+.msub{font-size:12px;color:var(--muted);margin-bottom:20px}
+.mitems{background:var(--bg);border-radius:var(--rs);padding:12px;margin-bottom:16px;max-height:200px;overflow-y:auto}
+.mitem{display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid var(--border)}
+.mitem:last-child{border:none}
+.mtotal{display:flex;justify-content:space-between;font-size:14px;font-weight:700;margin-bottom:20px}
+.mbtns{display:flex;gap:10px}
+.bcnl{flex:1;padding:10px;border:1px solid var(--border);background:transparent;border-radius:var(--rs);font-size:13px;cursor:pointer}
+.bcnl:hover{background:var(--bg)}
+.bconf{flex:2;padding:10px;background:var(--accent);color:#fff;border:none;border-radius:var(--rs);font-size:13px;font-weight:600;cursor:pointer}
+.bconf:hover{background:var(--accent-h)}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo"><div class="logo-dot"></div> ShopDRF</div>
+  <button class="nb active" id="tab-products" onclick="goPage('products')">🛍 Mahsulotlar</button>
+  <button class="nb" id="tab-orders"   onclick="goPage('orders')">📋 Buyurtmalar</button>
+  <button class="nb" id="tab-cart"     onclick="goPage('cart')">
+    🛒 Savat <span class="cbadge" id="cart-count">0</span>
+  </button>
+  <button class="nb" id="tab-admin"    onclick="goPage('admin')">⚙️ Admin</button>
+</nav>
+
+<div class="page active" id="page-products">
+  <div class="cont">
+    <div class="topbar">
+      <div><div class="ptitle">Mahsulotlar</div><div class="psub" id="prod-sub">Yuklanmoqda...</div></div>
+    </div>
+    <div class="filters" id="cat-filters"></div>
+    <div id="product-grid"></div>
+  </div>
+</div>
+
+<div class="page" id="page-orders">
+  <div class="cont">
+    <div class="topbar">
+      <div><div class="ptitle">Buyurtmalar</div><div class="psub">Barcha buyurtmalar ro'yxati</div></div>
+    </div>
+    <div id="orders-list"></div>
+  </div>
+</div>
+
+<div class="page" id="page-cart">
+  <div class="cont">
+    <div class="topbar">
+      <div><div class="ptitle">Savat</div><div class="psub" id="cart-sub">0 ta mahsulot</div></div>
+    </div>
+    <div class="clayout">
+      <div id="cart-items"></div>
+      <div class="sbox" id="cart-summary" style="display:none">
+        <div class="stitle">Buyurtma xulosasi</div>
+        <div class="srow"><span>Mahsulotlar</span><span id="sum-qty">0 ta</span></div>
+        <div class="srow"><span>Yetkazib berish</span><span>Bepul</span></div>
+        <hr class="sdiv">
+        <div class="stotal"><span>Jami</span><span id="sum-total">0 so'm</span></div>
+        <button class="btn-order" onclick="openModal()">Buyurtma berish →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="page" id="page-admin">
+  <div class="cont">
+    <div class="topbar">
+      <div><div class="ptitle">Admin panel</div><div class="psub">Mahsulot va kategoriya qo'shish</div></div>
+    </div>
+    <div class="admin-grid">
+
+      <div class="admin-card">
+        <div class="admin-card-title">➕ Kategoriya qo'shish</div>
+        <div class="form-group">
+          <label>Nomi</label>
+          <input id="cat-name" placeholder="Elektronika" />
+        </div>
+        <button class="btn-submit" onclick="createCategory()">Saqlash</button>
+        <div class="result-box" id="cat-result"></div>
+      </div>
+
+      <div class="admin-card">
+        <div class="admin-card-title">➕ Mahsulot qo'shish</div>
+        <div class="form-group">
+          <label>Nomi</label>
+          <input id="p-name" placeholder="iPhone 15" />
+        </div>
+        <div class="form-group">
+          <label>Narxi (so'm)</label>
+          <input id="p-price" type="number" placeholder="12500000" />
+        </div>
+        <div class="form-group">
+          <label>Kategoriya</label>
+          <select id="p-cat"><option value="">Tanlang...</option></select>
+        </div>
+        <button class="btn-submit" onclick="createProduct()">Saqlash</button>
+        <div class="result-box" id="prod-result"></div>
+      </div>
+
+      <div class="admin-card">
+        <div class="admin-card-title">✏️ Buyurtma statusini o'zgartirish</div>
+        <div class="form-group">
+          <label>Buyurtma ID</label>
+          <input id="ord-id" type="number" placeholder="1" />
+        </div>
+        <div class="form-group">
+          <label>Yangi status</label>
+          <select id="ord-status">
+            <option value="pending">Kutilmoqda</option>
+            <option value="processing">Jarayonda</option>
+            <option value="delivered">Yetkazildi</option>
+            <option value="cancelled">Bekor qilindi</option>
+          </select>
+        </div>
+        <button class="btn-submit" onclick="updateOrderStatus()">Yangilash</button>
+        <div class="result-box" id="ord-result"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="moverlay" id="modal">
+  <div class="modal">
+    <div class="mtitle">Buyurtmani tasdiqlash</div>
+    <div class="msub">Quyidagi mahsulotlar uchun buyurtma beriladi</div>
+    <div class="mitems" id="modal-items"></div>
+    <div class="mtotal"><span>Jami to'lov</span><span id="modal-total"></span></div>
+    
+    <div class="form-group" style="margin-bottom: 12px;">
+      <label style="display:block; font-size:12px; font-weight:500; color:var(--muted); margin-bottom:4px;">User ID (Foydalanuvchi ID raqami)</label>
+      <input id="order-user-id" type="number" placeholder="Masalan: 1" style="width:100%; padding:8px 10px; border-radius:var(--rs); border:1px solid var(--border); background:var(--bg); font-size:13px; color:var(--text); outline:none;" />
+    </div>
+
+    <div class="form-group" style="margin-bottom: 16px;">
+      <label style="display:block; font-size:12px; font-weight:500; color:var(--muted); margin-bottom:4px;">Yetkazib berish manzili</label>
+      <input id="order-address" placeholder="Viloyat, tuman, ko'cha, uy raqami..." style="width:100%; padding:8px 10px; border-radius:var(--rs); border:1px solid var(--border); background:var(--bg); font-size:13px; color:var(--text); outline:none;" />
+    </div>
+
+    <div class="mbtns">
+      <button class="bcnl" onclick="closeModal()">Bekor qilish</button>
+      <button class="bconf" id="btn-confirm" onclick="confirmOrder()">✓ Tasdiqlash</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ─── API BASE ─────────────────────────────────────────────────
+   Django urls.py dagi include() prefix lariga mos ravishda
+   o'zgartiring. Masalan: path('api/products/', include('apps.products.urls'))
+   bo'lsa — '/api/products/' to'g'ri.
+────────────────────────────────────────────────────────────── */
+const BASE = {
+  categories : '/category/',
+  products   : '/products/',
+  orders     : '/orders/',
+};
+
+/* ─── CSRF ──────────────────────────────────────────────────── */
+function getCsrf() {
+  return document.cookie.split(';')
+    .map(c => c.trim().split('='))
+    .find(([k]) => k === 'csrftoken')?.[1] ?? '';
+}
+
+/* ─── HTTP HELPERS ──────────────────────────────────────────── */
+async function GET(url) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`GET ${url} → ${r.status}`);
+  return r.json();
+}
+
+async function POST(url, body) {
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
+    body: JSON.stringify(body),
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw Object.assign(new Error(`${r.status}`), { data });
+  return data;
+}
+
+async function PATCH(url, body) {
+  const r = await fetch(url, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
+    body: JSON.stringify(body),
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw Object.assign(new Error(`${r.status}`), { data });
+  return data;
+}
+
+/* ─── STATE ─────────────────────────────────────────────────── */
+let products   = [];
+let categories = [];
+let orders     = [];
+let cart       = {};   // { id: { product, qty } }
+let activeCat  = null;
+
+/* ─── FORMAT ────────────────────────────────────────────────── */
+const fmt = n => Number(n).toLocaleString('uz-UZ') + " so'm";
+
+function cartQty()   { return Object.values(cart).reduce((s,v)=>s+v.qty,0); }
+function cartTotal() { return Object.values(cart).reduce((s,v)=>s+v.product.price*v.qty,0); }
+
+/* ─── TOAST ─────────────────────────────────────────────────── */
+function toast(msg, err=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = err ? '#991b1b' : '#1a1a18';
+  t.classList.add('show');
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+/* ─── PAGE NAV ──────────────────────────────────────────────── */
+function goPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nb').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.getElementById('tab-'  + name).classList.add('active');
+  if (name === 'cart')   renderCart();
+  if (name === 'orders') loadOrders();
+}
+
+/* ─── LOADING / EMPTY / ERROR ───────────────────────────────── */
+function setLoading(id) {
+  document.getElementById(id).innerHTML =
+    `<div class="sbox-state"><div class="spinner"></div><div class="sbox-sub">Yuklanmoqda...</div></div>`;
+}
+function setEmpty(id, icon, title, sub) {
+  document.getElementById(id).innerHTML =
+    `<div class="sbox-state"><div class="sbox-icon">${icon}</div><div class="sbox-title">${title}</div><div class="sbox-sub">${sub}</div></div>`;
+}
+function setError(id, msg) {
+  document.getElementById(id).innerHTML =
+    `<div class="sbox-state"><div class="sbox-icon">⚠️</div><div class="sbox-title">Xatolik</div><div class="sbox-sub">${msg}</div></div>`;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CATEGORIES  —  GET /api/category/
+   Response: [ { id, name, ... }, ... ]
+   ══════════════════════════════════════════════════════════════ */
+async function loadCategories() {
+  try {
+    const data = await GET(BASE.categories);
+    categories = Array.isArray(data) ? data : (data.results ?? []);
+    renderFilters();
+    populateCatSelect();
+  } catch(e) {
+    console.warn('Kategoriyalar yuklanmadi:', e.message);
+    categories = [];
+  }
+}
+
+function renderFilters() {
+  document.getElementById('cat-filters').innerHTML =
+    `<button class="pill active" onclick="filterCat(null,this)">Hammasi</button>` +
+    categories.map(c =>
+      `<button class="pill" onclick="filterCat(${c.id},this)">${c.name}</button>`
+    ).join('');
+}
+
+function filterCat(id, btn) {
+  activeCat = id;
+  document.querySelectorAll('.pill').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderProducts();
+}
+
+function populateCatSelect() {
+  const sel = document.getElementById('p-cat');
+  sel.innerHTML = `<option value="">Tanlang...</option>` +
+    categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PRODUCTS  —  GET /api/products/
+   Response: [ { id, name, price, category (id yoki obj), image?, ... } ]
+   ══════════════════════════════════════════════════════════════ */
+async function loadProducts() {
+  setLoading('product-grid');
+  try {
+    const data = await GET(BASE.products);
+    products = Array.isArray(data) ? data : (data.results ?? []);
+    document.getElementById('prod-sub').textContent = `${products.length} ta mahsulot`;
+    renderProducts();
+  } catch(e) {
+    setError('product-grid', e.message);
+    document.getElementById('prod-sub').textContent = 'Xatolik yuz berdi';
+  }
+}
+
+function renderProducts() {
+  const list = activeCat
+    ? products.filter(p => (p.category?.id ?? p.category) === activeCat)
+    : products;
+
+  if (!list.length) {
+    setEmpty('product-grid', '📦', 'Mahsulot topilmadi', 'Boshqa kategoriyani tanlang');
+    return;
+  }
+
+  document.getElementById('product-grid').innerHTML =
+    `<div class="pgrid">${list.map(p => {
+      const catName = categories.find(c => c.id === (p.category?.id ?? p.category))?.name ?? '';
+      const inCart  = cart[p.id];
+      const thumb   = p.image
+        ? `<img src="${p.image}" alt="${p.name}" loading="lazy">`
+        : `<span style="font-size:36px">🛍</span>`;
+      return `
+        <div class="pcard">
+          <div class="pthumb">${thumb}</div>
+          <div class="pcat-tag">${catName}</div>
+          <div class="pname">${p.name}</div>
+          <div class="pfoot">
+            <span class="pprice">${fmt(p.price)}</span>
+            <button class="btn-add ${inCart?'added':''}"
+                    id="ab-${p.id}"
+                    onclick="addToCart(${p.id})">
+              ${inCart ? `✓ ${inCart.qty} ta` : "+ Qo'sh"}
+            </button>
+          </div>
+        </div>`;
+    }).join('')}</div>`;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CART  (client-side state)
+   ══════════════════════════════════════════════════════════════ */
+function addToCart(id) {
+  const p = products.find(x => x.id === id);
+  if (!p) return;
+  cart[id] ? cart[id].qty++ : (cart[id] = { product: p, qty: 1 });
+  document.getElementById('cart-count').textContent = cartQty();
+  const btn = document.getElementById(`ab-${id}`);
+  if (btn) { btn.classList.add('added'); btn.textContent = `✓ ${cart[id].qty} ta`; }
+  toast(`"${p.name}" savatga qo'shildi`);
+}
+
+function changeQty(id, delta) {
+  if (!cart[id]) return;
+  cart[id].qty += delta;
+  if (cart[id].qty <= 0) {
+    delete cart[id];
+    const btn = document.getElementById(`ab-${id}`);
+    if (btn) { btn.classList.remove('added'); btn.textContent = "+ Qo'sh"; }
+  } else {
+    const btn = document.getElementById(`ab-${id}`);
+    if (btn) btn.textContent = `✓ ${cart[id].qty} ta`;
+  }
+  document.getElementById('cart-count').textContent = cartQty();
+  renderCart();
+}
+
+function removeCart(id) {
+  delete cart[id];
+  const btn = document.getElementById(`ab-${id}`);
+  if (btn) { btn.classList.remove('added'); btn.textContent = "+ Qo'sh"; }
+  document.getElementById('cart-count').textContent = cartQty();
+  renderCart();
+}
+
+function renderCart() {
+  const items = Object.values(cart);
+  const sum   = document.getElementById('cart-summary');
+  document.getElementById('cart-sub').textContent = `${cartQty()} ta mahsulot`;
+
+  if (!items.length) {
+    setEmpty('cart-items', '🛒', "Savat bo'sh", 'Mahsulotlar sahifasidan qo\'shing');
+    sum.style.display = 'none';
+    return;
+  }
+
+  document.getElementById('cart-items').innerHTML = items.map(({ product: p, qty: q }) => {
+    const img = p.image
+      ? `<img src="${p.image}" alt="${p.name}" style="width:100%;height:100%;object-fit:cover;border-radius:6px">`
+      : `<span style="font-size:24px">🛍</span>`;
+    return `
+      <div class="citem">
+        <div class="cicon">${img}</div>
+        <div class="cinfo">
+          <div class="cname">${p.name}</div>
+          <div class="cunit">${fmt(p.price)} / dona</div>
+        </div>
+        <div class="qctrl">
+          <button class="qbtn" onclick="changeQty(${p.id},-1)">−</button>
+          <span class="qval">${q}</span>
+          <button class="qbtn" onclick="changeQty(${p.id}, 1)">+</button>
+        </div>
+        <button class="rmbtn" onclick="removeCart(${p.id})">✕</button>
+      </div>`;
+  }).join('');
+
+  document.getElementById('sum-qty').textContent   = cartQty() + ' ta';
+  document.getElementById('sum-total').textContent = fmt(cartTotal());
+  sum.style.display = 'block';
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ORDERS  —  GET /api/orders/
+   Response: [ { id, status, created_at, order_items: [ { id, product:{id,name,price}, quantity } ] } ]
+   ══════════════════════════════════════════════════════════════ */
+async function loadOrders() {
+  setLoading('orders-list');
+  try {
+    const data = await GET(BASE.orders);
+    orders = Array.isArray(data) ? data : (data.results ?? []);
+    renderOrders();
+  } catch(e) {
+    setError('orders-list', e.message);
+  }
+}
+
+const SL = { pending:'Kutilmoqda', processing:'Jarayonda', delivered:'Yetkazildi', cancelled:'Bekor qilindi' };
+
+function renderOrders() {
+  if (!orders.length) {
+    setEmpty('orders-list', '📋', "Buyurtmalar yo'q", 'Hali birorta buyurtma berilmagan');
+    return;
+  }
+
+  document.getElementById('orders-list').innerHTML =
+    `<div class="ogrid">${orders.map(o => {
+      const items = o.order_items ?? o.items ?? [];
+      const total = o.total_price
+        ?? items.reduce((s,i) => s + Number(i.price ?? i.product?.price ?? 0) * i.quantity, 0);
+
+      return `
+        <div class="ocard">
+          <div class="ohead">
+            <div class="ometa">
+              <span class="oid">#${o.id}</span>
+              <span class="odate">${o.created_at ? new Date(o.created_at).toLocaleDateString('uz-UZ') : ''}</span>
+            </div>
+            <span class="sbadge s-${o.status ?? 'pending'}">${SL[o.status] ?? o.status}</span>
+          </div>
+          <div class="obody">
+            ${items.map(i => {
+              const name  = i.product?.name  ?? i.name  ?? 'Mahsulot';
+              const price = i.price ?? i.product?.price ?? 0;
+              const qty   = i.quantity ?? 1;
+              return `<div class="orow">
+                <span class="orow-name">${name}<span class="orow-qty">× ${qty}</span></span>
+                <span class="orow-price">${fmt(Number(price) * qty)}</span>
+              </div>`;
+            }).join('')}
+          </div>
+          <div class="ofoot">
+            <span class="otl">Jami to'lov</span>
+            <span class="otv">${fmt(total)}</span>
+          </div>
+        </div>`;
+    }).join('')}</div>`;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PLACE ORDER  —  POST /api/orders/create/
+   Payload: { user, address, order_items: [ { product: id, quantity: n }, ... ] }
+   ══════════════════════════════════════════════════════════════ */
+function openModal() {
+  const items = Object.values(cart);
+  if (!items.length) return;
+  
+  // Modal har ochilganda inputlarni tozalash
+  if(document.getElementById('order-address')) {
+    document.getElementById('order-address').value = '';
+  }
+  if(document.getElementById('order-user-id')) {
+    document.getElementById('order-user-id').value = '';
+  }
+
+  document.getElementById('modal-items').innerHTML = items.map(({ p, qty }) => {
+    // Sizdagi cart strukturasiga qarab { product:p, qty:q } shaklida ajratamiz
+    const prod = items[0].product ? items.map(x => x.product) : items.map(x => x.p);
+    return items.map(({ product:p, qty:q }) => 
+      `<div class="mitem"><span>${p.name} × ${q}</span><span>${fmt(p.price*q)}</span></div>`
+    ).join('');
+  })[0]; // duplikat tushmasligi uchun map elementini to'g'rilaymiz
+
+  document.getElementById('modal-total').textContent = fmt(cartTotal());
+  document.getElementById('modal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+}
+
+async function confirmOrder() {
+  // 1. Yangi qo'shilgan: User ID qiymatini olish va tekshirish
+  const userIdVal = document.getElementById('order-user-id').value.trim();
+  if(!userIdVal) {
+    toast('Iltimos, User ID raqamini kiriting!', true);
+    document.getElementById('order-user-id').focus();
+    return;
+  }
+
+  // 2. Manzil qiymatini olish va tekshirish
+  const addressVal = document.getElementById('order-address').value.trim();
+  if(!addressVal) {
+    toast('Iltimos, yetkazib berish manzilingizni kiriting!', true);
+    document.getElementById('order-address').focus();
+    return;
+  }
+
+  const btn = document.getElementById('btn-confirm');
+  btn.disabled = true; btn.textContent = 'Yuklanmoqda...';
+
+  // 3. Payload: DRF so'rayotgan 'user' kaliti qo'shildi
+  const payload = {
+    user: Number(userIdVal), // Backend raqam (Integer) sifatida kutadi
+    address: addressVal,
+    order_items: Object.values(cart).map(({ product, qty }) => ({
+      product : product.id,
+      quantity: qty,
+    })),
+  };
+
+  try {
+    await POST(BASE.orders + 'create/', payload);
+    cart = {};
+    document.getElementById('cart-count').textContent = 0;
+    closeModal();
+    toast('✅ Buyurtma muvaffaqiyatli berildi!');
+    renderCart();
+    renderProducts(); 
+    await loadOrders();
+    setTimeout(() => goPage('orders'), 600);
+  } catch(e) {
+    const detail = e.data ? JSON.stringify(e.data) : e.message;
+    toast('Xatolik: ' + detail, true);
+  } finally {
+    btn.disabled = false; btn.textContent = '✓ Tasdiqlash';
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ADMIN  —  Category & Product CRUD  +  Order status update
+   ══════════════════════════════════════════════════════════════ */
+function showResult(id, data, ok) {
+  const el = document.getElementById(id);
+  el.className = 'result-box ' + (ok ? 'result-ok' : 'result-err');
+  el.style.display = 'block';
+  el.textContent = JSON.stringify(data, null, 2);
+}
+
+/* POST /api/category/create/ — { name } */
+async function createCategory() {
+  const name = document.getElementById('cat-name').value.trim();
+  if (!name) { toast("Kategoriya nomini kiriting", true); return; }
+  const btn = event.target; btn.disabled = true;
+  try {
+    const data = await POST(BASE.categories + 'create/', { name });
+    showResult('cat-result', data, true);
+    toast(`"${data.name}" kategoriyasi qo'shildi`);
+    document.getElementById('cat-name').value = '';
+    await loadCategories();
+  } catch(e) {
+    showResult('cat-result', e.data ?? { error: e.message }, false);
+    toast('Xatolik: ' + e.message, true);
+  } finally { btn.disabled = false; }
+}
+
+/* POST /api/products/create/ — { name, price, category } */
+async function createProduct() {
+  const name  = document.getElementById('p-name').value.trim();
+  const price = document.getElementById('p-price').value;
+  const cat   = document.getElementById('p-cat').value;
+  if (!name || !price || !cat) { toast("Barcha maydonlarni to'ldiring", true); return; }
+  const btn = event.target; btn.disabled = true;
+  try {
+    const data = await POST(BASE.products + 'create/', { name, price: Number(price), category: Number(cat) });
+    showResult('prod-result', data, true);
+    toast(`"${data.name}" mahsuloti qo'shildi`);
+    document.getElementById('p-name').value = '';
+    document.getElementById('p-price').value = '';
+    await loadProducts();
+  } catch(e) {
+    showResult('prod-result', e.data ?? { error: e.message }, false);
+    toast('Xatolik: ' + e.message, true);
+  } finally { btn.disabled = false; }
+}
+
+/* PATCH /api/orders/<id>/update/ — { status } */
+async function updateOrderStatus() {
+  const id     = document.getElementById('ord-id').value.trim();
+  const status = document.getElementById('ord-status').value;
+  if (!id) { toast("Buyurtma ID ni kiriting", true); return; }
+  const btn = event.target; btn.disabled = true;
+  try {
+    const data = await PATCH(`${BASE.orders}${id}/update/`, { status });
+    showResult('ord-result', data, true);
+    toast(`#${id} buyurtma statusi yangilandi`);
+    if (document.getElementById('page-orders').classList.contains('active')) await loadOrders();
+  } catch(e) {
+    showResult('ord-result', e.data ?? { error: e.message }, false);
+    toast('Xatolik: ' + e.message, true);
+  } finally { btn.disabled = false; }
+}
+
+/* ─── INIT ───────────────────────────────────────────────────── */
+(async () => {
+  await loadCategories();
+  await loadProducts();
+})();
+</script>
+</body>
+</html>
