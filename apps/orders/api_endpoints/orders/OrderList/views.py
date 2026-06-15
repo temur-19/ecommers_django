@@ -12,6 +12,7 @@ from apps.orders.models import Order
 #     serializer = OrderListSerializer(orders, many=True)
 #     return Response(serializer.data)
 
+
 class OrderListAPiView(ListAPIView):
     queryset = Order.objects.all()
     serializer_class = OrderListSerializer
@@ -20,4 +21,6 @@ class OrderListAPiView(ListAPIView):
         queryset = super().get_queryset()
         queryset = queryset.filter(address = 'Tashkent')
         return queryset
+    
+
         
