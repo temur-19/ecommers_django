@@ -1,12 +1,17 @@
 from django.db import models
-from apps.common.models import BaseModel
-from django.contrib.auth.models import User
+from django.contrib.auth.models import AbstractUser, PermissionsMixin
+from apps.users.managers import UserManager
 
 # Create your models here.
 
-class UserProfile(BaseModel):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
-    phone_number = models.CharField(max_length=20)
+class UserProfile(AbstractUser,PermissionsMixin):
+    phone_number = models.CharField(max_length=15, unique=True)
+    date_of_birth = models.DateField(blank=True, null=True)
+    gender = models.CharField(max_length=10, blank=True, null=True)
+    objects = UserManager()
+
+    USERNAME_FIELD = 'phone_number'
 
     def __str__(self):
-        return self.user.username
+        return self.phone_number
+    
