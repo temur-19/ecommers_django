@@ -10,6 +10,7 @@ class Order(BaseModel):
     user = models.ForeignKey(settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE)
     address = models.CharField(max_length=255)
+    status = models.CharField(max_length=30, default='Pending')
 
     def __str__(self):
         return f"{self.user.phone_number}"  
