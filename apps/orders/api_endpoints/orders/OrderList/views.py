@@ -26,6 +26,3 @@ class OrderListAPiView(ListAPIView):
     #     queryset = super().get_queryset()
     #     queryset = queryset.filter(address = 'Tashkent')
     #     return queryset
-    
-
-        
