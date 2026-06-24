@@ -216,3 +216,15 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+# Environment
+.env
+.env.*
+
+# Docker
+docker-compose.override.yml
+
+# Python
+venv/
+__pycache__/
+*.pyc
+db.sqlite3
